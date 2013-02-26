@@ -1,0 +1,258 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+	<style type="text/css">
+		.buttons{
+			width:65px;
+		}
+		th{
+			background-color:#C4B9B9;
+			font-size: 15px;
+		}
+		td{
+			height: 15px;
+		}
+		
+			
+
+	</style>
+    <script type="text/javascript">
+
+        function doConnect() {
+            websocket = new WebSocket("ws://localhost:8080/service");
+			websocket.onopen = function(evt) { onOpen(evt) };
+			websocket.onclose = function(evt) { onClose(evt) };
+			websocket.onmessage = function(evt) { onMessage(evt) };
+			websocket.onerror = function(evt) { onError(evt) };
+		}
+
+		function doDisconnect(){
+			websocket.close();
+		}
+
+		function doOrigSend(){
+			var message;
+			var orig = document.originate.origNumber.value;
+			message = "originate " + orig + " " + document.ter.addresses.value + " " + document.ter.terminals.value;
+			alert(message);
+			websocket.send(message);
+		}
+		
+		var onHold = false;
+		var muted = false;
+		function doSendCallControl(i){
+			var control;
+			if(i == 1)
+				control = "answer";
+			else if(i == 2){
+				if(!onHold){
+					control = "hold";
+					onHold = true;
+					document.callControls.holdCall.value="Unhold";
+				}
+				else{
+					control = "unhold";
+					onHold = false;
+					document.callControls.holdCall.value="Hold";
+				}
+			}
+			else if(i == 3)
+				control = "transfer";
+			else if(i == 4){
+				document.getElementById("calling").innerHTML="";
+				document.getElementById("called").innerHTML="";
+				document.getElementById("term/addr").innerHTML="";
+				document.getElementById("type").innerHTML="";
+				document.getElementById("localState").innerHTML="";
+				control = "release";
+			}
+			else if(i == 5){
+				if(!muted){
+					muted = true;
+					control = "mute";
+					document.callControls.muteCall.value = "Unmute";
+				}
+				else{
+					muted = false;
+					control = "unmute";
+					document.callControls.muteCall.value = "Mute";
+				}
+			}
+			else if(i == 6)
+				control = "conf";
+			alert("Sending " + control);
+			websocket.send(control);
+		}
+
+		function onOpen(evt){
+        	window.alert("Connected");
+        	clientStatus.innerHTML = "The client is connected";
+        	setButtons(true);
+        }
+
+        function setButtons(isConnected){
+        	document.connect.connect.disabled = isConnected;
+        	document.connect.disconnect.disabled = !isConnected;
+        	document.originate.originateButton.disabled = !isConnected;
+        	document.callControls.answerCall.disabled = !isConnected;
+        	document.callControls.holdCall.disabled = !isConnected;
+        	document.callControls.transferCall.disabled = !isConnected;
+        	document.callControls.releaseCall.disabled = !isConnected;
+        	document.callControls.muteCall.disabled = !isConnected;
+        	document.callControls.ConferenceCall.disabled = !isConnected;
+			document.originate.origNumber.disabled = !isConnected;
+			document.originate.origNumber.value = "";
+			document.getElementById("calling").innerHTML="";
+			document.getElementById("called").innerHTML="";
+			document.getElementById("term/addr").innerHTML="";
+			document.getElementById("localState").innerHTML="";
+			document.getElementById("type").innerHTML="";
+			removeOptions(document.ter.terminals);
+			removeOptions(document.ter.addresses);
+			i = 1;
+			j = 1;
+        }
+
+		function onClose(evt){
+			window.alert("Disconnected");
+			clientStatus.innerHTML = "The client is disconnected";
+			setButtons(false);
+		}
+				
+		function onMessage(evt){
+			//window.alert("message received: " + evt.data);
+			if(evt.data.indexOf("Line") >= 0)
+				addTerminals(evt.data);
+			else if(evt.data.length == 4)
+				addAddress(evt.data);
+			else if(evt.data.indexOf("properties") >= 0)
+				contactProperties(evt.data);
+			
+		}
+
+		function onError (evt){
+			window.alert("Error: " + evt.data);
+		}
+		
+		var i = 1;
+		function addTerminals(terminal){
+			var form = document.ter;
+			var newOption = document.createElement("OPTION");
+			form.terminals.options.add(newOption);
+			newOption.innerText = terminal;
+			newOption.value = i;
+			i++;
+		}
+		
+		var j = 1;
+		function addAddress(address){
+			var form = document.ter;
+			var newOption = document.createElement("option");
+			form.addresses.options.add(newOption);
+			newOption.innerText = address;
+			newOption.value = j;
+			j++;
+		}
+		
+		function removeOptions(selectBox){
+			var k;
+			for(k=selectBox.options.length-1; k>=0; k--)
+				selectBox.remove(k);
+		}
+		
+		function selectTerminal(){
+			var i = document.ter.addresses.selectedIndex;
+			document.ter.terminals.selectedIndex = i;
+		}
+		
+		function selectAddress(){
+			var i = document.ter.terminals.selectedIndex;
+			document.ter.addresses.selectedIndex = i;
+		}
+		
+		function contactProperties(properties){
+			var addr = document.ter.addresses;
+			var sel = addr.selectedIndex;
+			var termIndex = document.ter.terminals.selectedIndex;
+			var term = document.ter.terminals.options[termIndex].text;
+			var split = properties.split(" ");
+			var called = split[1];
+			var calling = split[2];
+			var type = split[3];
+			var localState = split[4];
+			var calling = addr.options[sel].text;
+			var terminalAddress;
+			terminalAddress = term + " / " + calling;
+			document.getElementById("calling").innerHTML=calling
+			document.getElementById("called").innerHTML=called;
+			document.getElementById("type").innerHTML=type;
+			document.getElementById("term/addr").innerHTML=terminalAddress;
+			document.getElementById("localState").innerHTML=localState;
+		}
+
+		//http://stackoverflow.com/questions/2808184/restricting-input-to-textbox-allowing-only-numbers-and-decimal-point
+		function isNumberKey(evt){
+			var charCode = (evt.which) ? evt.which : event.keyCode;
+		    if ((charCode < 48 || charCode > 57))
+		    	return false;
+			else
+		        return true;
+       }
+
+    </script>
+</head>
+<body>
+	<div id="connection">
+		<div id="clientStatus">The client is disconnected</div>
+		<form name="connect">
+			<input type="button" name="connect" value="Connect" onclick="doConnect()">
+			<input type="button" name="disconnect" value="Disconnect" onclick ="doDisconnect();" disabled>
+		</form>
+	</div>
+	<br>
+	<form name="ter">
+		<select name="terminals" style="width:100px" onchange="selectAddress();"></select>
+		<select name="addresses" style="width:55px" onchange="selectTerminal();"></select>
+	</form>
+	<br>
+	<form name="originate">
+		<input type="button" name="originateButton" value="Originate" onclick="doOrigSend();" disabled>
+		<input type="text" name="origNumber" onkeypress="return isNumberKey(event)" disabled>
+	</form>
+	<br>
+	
+	<table border="1" style="border-collapse:collapse; border-color:black;" padding="15px">
+		<tr>
+			<th>Terminal/Address</th>
+			<th>Local State</th>
+			<th>Remote State</th>
+			<th width="40px">Type</th>
+			<th>Calling</th>
+			<th>Called</th>
+		</tr>
+		<tr>
+			<td id="term/addr" style="height:20px;"></td>
+			<td id="localState"></td>
+			<td></td>
+			<td id ="type"></td>
+			<td id="calling"></td>
+			<td id="called"></td>
+		</tr>
+	</table>
+	
+	<form name="callControls">
+		<table>
+			<tr>
+				<td><input type="button" name="answerCall" value="Answer" class="buttons" onclick="doSendCallControl(1);" disabled></td>
+				<td><input type="button" name="holdCall" value="Hold" class="buttons" onclick="doSendCallControl(2);" disabled></td>
+				<td><input type="button" name="transferCall" value="Transfer" class="buttons" onclick="doSendCallControl(3);" disabled></td>
+			</tr>
+			<tr>
+				<td><input type="button" name="releaseCall" value="Release" class="buttons" onclick="doSendCallControl(4);" disabled></td>
+				<td><input type="button" name="muteCall" value="Mute" class="buttons" onclick="doSendCallControl(5);" disabled></td>
+				<td><input type="button" name="ConferenceCall" value="Conf." class="buttons" onclick="doSendCallControl(6);" disabled></td>
+			</tr>
+		</table>
+	</form>
+</body>
+</html>
