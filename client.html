@@ -34,7 +34,7 @@
 			var message;
 			var orig = document.originate.origNumber.value;
 			message = "originate " + orig + " " + document.ter.addresses.value + " " + document.ter.terminals.value;
-			alert(message);
+			//alert(message);
 			websocket.send(message);
 		}
 		
@@ -64,6 +64,10 @@
 				document.getElementById("term/addr").innerHTML="";
 				document.getElementById("type").innerHTML="";
 				document.getElementById("localState").innerHTML="";
+				document.getElementById("remoteState").innerHTML="";
+				document.callControls.releaseCall.disabled = true;
+				document.callControls.holdCall.disabled = true;
+				document.callControls.muteCall.disabled = true;
 				control = "release";
 			}
 			else if(i == 5){
@@ -80,7 +84,7 @@
 			}
 			else if(i == 6)
 				control = "conf";
-			alert("Sending " + control);
+			//alert("Sending " + control);
 			websocket.send(control);
 		}
 
@@ -94,24 +98,45 @@
         	document.connect.connect.disabled = isConnected;
         	document.connect.disconnect.disabled = !isConnected;
         	document.originate.originateButton.disabled = !isConnected;
-        	document.callControls.answerCall.disabled = !isConnected;
-        	document.callControls.holdCall.disabled = !isConnected;
-        	document.callControls.transferCall.disabled = !isConnected;
-        	document.callControls.releaseCall.disabled = !isConnected;
-        	document.callControls.muteCall.disabled = !isConnected;
-        	document.callControls.ConferenceCall.disabled = !isConnected;
-			document.originate.origNumber.disabled = !isConnected;
+        	document.originate.origNumber.disabled = !isConnected;
 			document.originate.origNumber.value = "";
 			document.getElementById("calling").innerHTML="";
 			document.getElementById("called").innerHTML="";
 			document.getElementById("term/addr").innerHTML="";
 			document.getElementById("localState").innerHTML="";
+			document.getElementById("remoteState").innerHTML="";
 			document.getElementById("type").innerHTML="";
 			removeOptions(document.ter.terminals);
 			removeOptions(document.ter.addresses);
 			i = 1;
 			j = 1;
+			if(!isConnected){
+				document.callControls.releaseCall.disabled = true;
+				document.callControls.holdCall.disabled = true;
+				document.callControls.muteCall.disabled = true;
+			}
         }
+		
+		function setCallControls(state){
+			if(state == "Alerting")
+				document.callControls.releaseCall.disabled = false;
+			else if(state == "Established"){
+				document.callControls.holdCall.disabled = false;
+				document.callControls.muteCall.disabled = false;
+			}
+			else if(state == "Disonnected"){
+				document.callControls.releaseCall.disabled = true;
+				document.callControls.holdCall.disabled = true;
+				document.callControls.muteCall.disabled = true;
+			}
+			
+			//document.callControls.answerCall.disabled = !isConnected;
+        	
+        	//document.callControls.transferCall.disabled = !isConnected;
+        	
+        	
+        	//document.callControls.ConferenceCall.disabled = !isConnected;
+		}
 
 		function onClose(evt){
 			window.alert("Disconnected");
@@ -127,6 +152,10 @@
 				addAddress(evt.data);
 			else if(evt.data.indexOf("properties") >= 0)
 				contactProperties(evt.data);
+			else if(evt.data.indexOf("local") >=0)
+				updateLocalState(evt.data);
+			else if(evt.data.indexOf("remote")>=0)
+				updateRemoteState(evt.data);
 			
 		}
 
@@ -189,6 +218,19 @@
 			document.getElementById("term/addr").innerHTML=terminalAddress;
 			document.getElementById("localState").innerHTML=localState;
 		}
+		
+		function updateLocalState(state){
+			state=state.replace("local", "");
+			if(state != "Dropped")
+				document.getElementById("localState").innerHTML=state;
+			
+		}
+		
+		function updateRemoteState(state){
+			state=state.replace("remote", "");
+			document.getElementById("remoteState").innerHTML=state;
+			setCallControls(state);
+		}
 
 		//http://stackoverflow.com/questions/2808184/restricting-input-to-textbox-allowing-only-numbers-and-decimal-point
 		function isNumberKey(evt){
@@ -233,7 +275,7 @@
 		<tr>
 			<td id="term/addr" style="height:20px;"></td>
 			<td id="localState"></td>
-			<td></td>
+			<td id="remoteState"></td>
 			<td id ="type"></td>
 			<td id="calling"></td>
 			<td id="called"></td>

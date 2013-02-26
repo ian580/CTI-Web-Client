@@ -20,6 +20,7 @@ class ConnectionSocket
     private IContact contact;
     private IConnection[] conn = null;
     private ITerminalConnection terminalConn = null;
+    
   
     //Constructor
     public ConnectionSocket(Socket socket)
@@ -36,6 +37,8 @@ class ConnectionSocket
           sendTerminals();
           printAddress();
           sendAddresses();
+          createEventHandlers();
+
         }
         Listen();
            
@@ -45,7 +48,6 @@ class ConnectionSocket
     private void Listen()
     {
         ConnectedSocket.BeginReceive(dataBuffer, 0, dataBuffer.Length, 0, OnReceive, null);
-        
     }
     
     //method to send message to client
@@ -67,9 +69,14 @@ class ConnectionSocket
         myToolkit = new Toolkit();
         myToolkit.SessionConnected += new SessionConnectedEventHandler(OnSessionConnectedEvent);
         myToolkit.SessionDisconnected += new SessionDisconnectedEventHandler(OnSessionDisconnectedEvent);
+        
         myToolkit.Server = "localhost";
         myToolkit.Credentials = new CCTCredentials();
-        try { mySession = myToolkit.Connect(); }
+        try
+        {
+            mySession = myToolkit.Connect();
+            
+        }
         catch (OperationFailureException ofe)
         {
             Console.WriteLine("Failed to connect to server. Error: " + ofe.Error.ToString() );
@@ -82,11 +89,22 @@ class ConnectionSocket
         else
           return false;
     }
+
+    private void createEventHandlers()
+    {
+        ConnectionPropertyEventHandler handler = myToolkit.CreateEventHandler(new ConnectionPropertyEventHandler(onConnectionPropertyChanged));
+        mySession.ConnectionPropertyChanged += handler;
+        TermConnStateEventHandler hand = myToolkit.CreateEventHandler(new TermConnStateEventHandler(onTermConnStateChanged));
+        mySession.TermConnStateChanged += hand;
+        ConnectionStateEventHandler connStateEventHandler = myToolkit.CreateEventHandler(new ConnectionStateEventHandler(onConnectionStateChange));
+        mySession.RemoteConnectionStateChanged += connStateEventHandler;
+    }
     
     //Event handlers for connection/disconnection to cct server
     private void OnSessionConnectedEvent(SessionConnectedEventArgs e)
     {
       Console.WriteLine("Connected to CCT server");
+      //createEventHandlers();
     }
 
     private void OnSessionDisconnectedEvent(SessionDisconnectedEventArgs e)
@@ -152,8 +170,22 @@ class ConnectionSocket
 
     private void onTermConnStateChanged(TermConnStateEventArgs e)
     {
-        Console.WriteLine("State changed");
+        //Console.WriteLine("TerminalConnection to terminal {0} is now in the {1} state.", e.Sender.Name, e.NewState);
+        send("local" + e.NewState.ToString());
     }
+  
+    private void onConnectionPropertyChanged(ConnectionPropertyEventArgs e)
+    {
+        Console.WriteLine("The {0} property has changed on connection to address {1}.", e.ChangedProperty, e.Address.Name);
+    }
+
+    private void onConnectionStateChange(ConnectionStateEventArgs args)
+    {
+        Console.WriteLine("Remote connection to address {0} is now in the {1} state.", args.Address.Name, args.NewState);
+        send("remote" + args.NewState.ToString());
+    }
+
+    
 
     //invoked when message received from client
     private void OnReceive(IAsyncResult result)
@@ -266,28 +298,42 @@ class ConnectionSocket
     private void holdCall()
     {
         Console.WriteLine("Hold Call method");
-        terminalConn = conn[0].TerminalConnections[0];
-        TerminalConnectionState state = terminalConn.CurrentState;
-        if (terminalConn.Capabilities.CanHold && state == TerminalConnectionState.Active)
+        if (conn != null)
         {
-            terminalConn.Hold();
-            Console.WriteLine("Call Held");
+            terminalConn = conn[0].TerminalConnections[0];
+            TerminalConnectionState state = terminalConn.CurrentState;
+            if (terminalConn.Capabilities.CanHold && state == TerminalConnectionState.Active)
+            {
+                try
+                {
+                    terminalConn.Hold();
+                    Console.WriteLine("Call Held");
+                }
+                catch (OperationFailureException e)
+                {
+                    Console.WriteLine(e.Error.ToString());
+                }
+            }
+            else
+                Console.WriteLine("Cannot Hold Call");
         }
-        else
-            Console.WriteLine("Cannot Hold Call");
     }
 
     private void unholdCall()
     {
         Console.WriteLine("Unhold Call method");
-        terminalConn = conn[0].TerminalConnections[0];
-        if (terminalConn.Capabilities.CanUnhold)
+        if (conn != null)
         {
-            terminalConn.Unhold();
-            Console.WriteLine("Call Unheld");
+            terminalConn = conn[0].TerminalConnections[0];
+            if (terminalConn.Capabilities.CanUnhold)
+            {
+                terminalConn.Unhold();
+                Console.WriteLine("Call Unheld");
+            }
+            else
+                Console.WriteLine("Cannot Unhold call");
+
         }
-        else
-            Console.WriteLine("Cannot Unhold call");
     }
 
     private void transferCall()
@@ -297,40 +343,48 @@ class ConnectionSocket
     private void releaseCall()
     {
         Console.WriteLine("Release call method");
-        
-        if (conn[0].Capabilities.CanDisconnect)
+        if (conn != null)
         {
-            conn[0].Disconnect();
-            Console.WriteLine("Call disconnected");
+            if (conn[0].Capabilities.CanDisconnect)
+            {
+                conn[0].Disconnect();
+                Console.WriteLine("Call disconnected");
+            }
+            else
+                Console.WriteLine("Cannot Disconnect");
         }
-        else
-            Console.WriteLine("Cannot Disconnect");
     }
 
     private void muteCall()
     {
         Console.WriteLine("Mute call method");
-        terminalConn = conn[0].TerminalConnections[0];
-        if (terminalConn.Capabilities.CanMute && !terminalConn.IsMuted)
+        if (conn != null)
         {
-            terminalConn.Mute();
-            Console.WriteLine("Call Muted");
+            terminalConn = conn[0].TerminalConnections[0];
+            if (terminalConn.Capabilities.CanMute && !terminalConn.IsMuted)
+            {
+                terminalConn.Mute();
+                Console.WriteLine("Call Muted");
+            }
+            else
+                Console.WriteLine("Cannot Mute Call");
         }
-        else
-            Console.WriteLine("Cannot Mute Call");
     }
 
     private void unMuteCall()
     {
         Console.WriteLine("UnMute call method");
-        terminalConn = conn[0].TerminalConnections[0];
-        if (terminalConn.IsMuted)
+        if (conn != null)
         {
-            terminalConn.Hold();
-            Console.WriteLine("Call Unmuted");
+            terminalConn = conn[0].TerminalConnections[0];
+            if (terminalConn.IsMuted)
+            {
+                terminalConn.Hold();
+                Console.WriteLine("Call Unmuted");
+            }
+            else
+                Console.WriteLine("Cannot Unmute Call");
         }
-        else
-            Console.WriteLine("Cannot Unmute Call");
     }
 
     private void conferenceCall()
