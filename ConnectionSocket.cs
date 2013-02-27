@@ -161,7 +161,7 @@ class ConnectionSocket
     //send addresses to client
     private void sendAddresses()
     {
-      for (int i = 0; i < 6; i++)
+      for (int i = 0; i < 5; i++)
       {
         string sAddress = myAddresses[i].ToString();
         send(sAddress);
@@ -183,6 +183,7 @@ class ConnectionSocket
     {
         Console.WriteLine("Remote connection to address {0} is now in the {1} state.", args.Address.Name, args.NewState);
         send("remote" + args.NewState.ToString());
+        
     }
 
     
@@ -201,8 +202,7 @@ class ConnectionSocket
              * The remaining bytes are the actual message*/ 
             
             int start = 6;//start position of data
-            Console.WriteLine("Message received");
-
+            
             //get masks bytes
             int maskIndex = 2;
             byte[] masks = new byte[4];
@@ -348,6 +348,8 @@ class ConnectionSocket
             if (conn[0].Capabilities.CanDisconnect)
             {
                 conn[0].Disconnect();
+                conn = null;
+                contact = null;
                 Console.WriteLine("Call disconnected");
             }
             else
@@ -401,7 +403,10 @@ class ConnectionSocket
         Console.WriteLine("Called: " + called);
         Console.WriteLine("Calling Address: " + callingAddress);
         Console.WriteLine("Type: " + ct);
-        terminalConn = conn[0].TerminalConnections[0];
+        if(conn[0].ToString().Contains("300"))
+            terminalConn = conn[0].TerminalConnections[0];
+        else
+            terminalConn = conn[1].TerminalConnections[0];
         TerminalConnectionState state = terminalConn.CurrentState;
         string localState = state.ToString();
         string properties = "properties " + called + " " + callingAddress + " " + ct + " " + localState;

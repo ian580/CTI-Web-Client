@@ -48,11 +48,13 @@
 				if(!onHold){
 					control = "hold";
 					onHold = true;
+					document.callControls.releaseCall.disabled = true;
 					document.callControls.holdCall.value="Unhold";
 				}
 				else{
 					control = "unhold";
 					onHold = false;
+					document.callControls.releaseCall.disabled = false;
 					document.callControls.holdCall.value="Hold";
 				}
 			}
@@ -124,7 +126,7 @@
 				document.callControls.holdCall.disabled = false;
 				document.callControls.muteCall.disabled = false;
 			}
-			else if(state == "Disonnected"){
+			else if(state == "Disconnected"){
 				document.callControls.releaseCall.disabled = true;
 				document.callControls.holdCall.disabled = true;
 				document.callControls.muteCall.disabled = true;
@@ -216,13 +218,25 @@
 			document.getElementById("called").innerHTML=called;
 			document.getElementById("type").innerHTML=type;
 			document.getElementById("term/addr").innerHTML=terminalAddress;
-			document.getElementById("localState").innerHTML=localState;
+			
 		}
 		
 		function updateLocalState(state){
 			state=state.replace("local", "");
-			if(state != "Dropped")
-				document.getElementById("localState").innerHTML=state;
+			document.getElementById("localState").innerHTML=state;
+			if(state == "Dropped")
+				window.setTimeout("clearCallInfo()", 100);
+			
+		}
+		
+		function clearCallInfo(){
+			
+			document.getElementById("calling").innerHTML=""
+			document.getElementById("called").innerHTML="";
+			document.getElementById("type").innerHTML="";
+			document.getElementById("term/addr").innerHTML="";
+			document.getElementById("localState").innerHTML="";
+			document.getElementById("remoteState").innerHTML="";
 			
 		}
 		
