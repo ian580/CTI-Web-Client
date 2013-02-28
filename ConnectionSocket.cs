@@ -33,9 +33,7 @@ class ConnectionSocket
         {
           myTerminals = getTerminals();
           myAddresses = getAddresses();
-          printTerminals();
           sendTerminals();
-          printAddress();
           sendAddresses();
           createEventHandlers();
 
@@ -98,6 +96,10 @@ class ConnectionSocket
         mySession.TermConnStateChanged += hand;
         ConnectionStateEventHandler connStateEventHandler = myToolkit.CreateEventHandler(new ConnectionStateEventHandler(onConnectionStateChange));
         mySession.RemoteConnectionStateChanged += connStateEventHandler;
+        ContactScopeEventHandler contactEnteringScopeHandler = myToolkit.CreateEventHandler(new ContactScopeEventHandler(onContactEnteringScope));
+        mySession.ContactEnteringScope += contactEnteringScopeHandler;
+        ContactScopeEventHandler contactLeavingScopeHandler = myToolkit.CreateEventHandler(new ContactScopeEventHandler(onContactLeavingScope));
+        mySession.ContactLeavingScope += contactLeavingScopeHandler;
     }
     
     //Event handlers for connection/disconnection to cct server
@@ -130,22 +132,6 @@ class ConnectionSocket
     {
       IAddress[] myAddresses = mySession.Addresses;
       return myAddresses;
-    }
-
-    //debug method to view assigned terminals
-    private void printTerminals()
-    {
-      foreach (ITerminal cctTerminal in myTerminals)
-        Console.WriteLine(cctTerminal);
-    }
-    
-    //debug method to view assigned addresses
-    private void printAddress()
-    {
-      Console.Write("Addresses: ");  
-      foreach (IAddress cctAddress in myAddresses)
-        Console.Write(cctAddress + " ");
-      Console.WriteLine();
     }
 
     //send terminals to client
@@ -183,7 +169,20 @@ class ConnectionSocket
     {
         Console.WriteLine("Remote connection to address {0} is now in the {1} state.", args.Address.Name, args.NewState);
         send("remote" + args.NewState.ToString());
-        
+    }
+
+    private void onContactEnteringScope(ContactScopeEventArgs args)
+    {
+        Console.WriteLine("Contact {0} has entered scope.", args.Contact.ID);
+        contact = args.Contact;
+        conn = contact.Connections;
+        getContactProperties();
+    }
+
+    private void onContactLeavingScope(ContactScopeEventArgs args)
+    {
+        Console.WriteLine("Contact {0} has left scope.", args.Contact.ID);
+        contact = null;
     }
 
     
@@ -276,9 +275,10 @@ class ConnectionSocket
             
             try
             {
-               contact = myTerminals[term].Originate(myAddresses[addr], number);
-               conn = contact.Connections;
-               getContactProperties();
+               //contact = myTerminals[term].Originate(myAddresses[addr], number);
+               //conn = contact.Connections;
+               myTerminals[term].Originate(myAddresses[addr], number);
+               //getContactProperties();
             }
             catch (OperationFailureException ofe)
             {
@@ -293,7 +293,25 @@ class ConnectionSocket
     private void answerCall()
     {
         Console.WriteLine("Answer call method");
-    }
+        
+        terminalConn = conn[1].TerminalConnections[0];
+        TerminalConnectionState state = terminalConn.CurrentState;
+        if (terminalConn.Capabilities.CanAnswer && state == TerminalConnectionState.Ringing)
+        {
+            try
+            {
+                terminalConn.Answer();
+                Console.WriteLine("Call Answered");
+            }
+            catch (OperationFailureException e)
+            {
+                Console.WriteLine(e.Error.ToString());
+            }
+         }
+         else
+            Console.WriteLine("Cannot answer call");
+     }
+    
 
     private void holdCall()
     {
