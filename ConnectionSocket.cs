@@ -8,6 +8,7 @@ using Nortel.CCT;
 
 
 
+
 class ConnectionSocket
 {
     public Socket ConnectedSocket { get; private set; }
@@ -20,6 +21,7 @@ class ConnectionSocket
     private IContact contact;
     private IConnection[] conn = null;
     private ITerminalConnection terminalConn = null;
+    private AccessPermissions perm;
     
   
     //Constructor
@@ -176,6 +178,7 @@ class ConnectionSocket
         Console.WriteLine("Contact {0} has entered scope.", args.Contact.ID);
         contact = args.Contact;
         conn = contact.Connections;
+        
         getContactProperties();
     }
 
@@ -275,10 +278,7 @@ class ConnectionSocket
             
             try
             {
-               //contact = myTerminals[term].Originate(myAddresses[addr], number);
-               //conn = contact.Connections;
-               myTerminals[term].Originate(myAddresses[addr], number);
-               //getContactProperties();
+                myTerminals[term].Originate(myAddresses[addr], number);
             }
             catch (OperationFailureException ofe)
             {
@@ -292,9 +292,10 @@ class ConnectionSocket
 
     private void answerCall()
     {
-        Console.WriteLine("Answer call method");
-        
-        terminalConn = conn[1].TerminalConnections[0];
+        if(conn[0].CurrentState.ToString()== "Alerting")
+            terminalConn = conn[0].TerminalConnections[0];
+        else if (conn[1].CurrentState.ToString() == "Alerting")
+            terminalConn = conn[1].TerminalConnections[0];
         TerminalConnectionState state = terminalConn.CurrentState;
         if (terminalConn.Capabilities.CanAnswer && state == TerminalConnectionState.Ringing)
         {
@@ -315,10 +316,13 @@ class ConnectionSocket
 
     private void holdCall()
     {
-        Console.WriteLine("Hold Call method");
+        
         if (conn != null)
         {
-            terminalConn = conn[0].TerminalConnections[0];
+            if (perm.ToString() != "Identify")
+                terminalConn = conn[0].TerminalConnections[0];
+            else
+                terminalConn = conn[1].TerminalConnections[0];
             TerminalConnectionState state = terminalConn.CurrentState;
             if (terminalConn.Capabilities.CanHold && state == TerminalConnectionState.Active)
             {
@@ -339,10 +343,13 @@ class ConnectionSocket
 
     private void unholdCall()
     {
-        Console.WriteLine("Unhold Call method");
+        AccessPermissions perm = conn[0].Permissions;
         if (conn != null)
         {
-            terminalConn = conn[0].TerminalConnections[0];
+            if (perm.ToString() != "Identify")
+                terminalConn = conn[0].TerminalConnections[0];
+            else
+                terminalConn = conn[1].TerminalConnections[0];
             if (terminalConn.Capabilities.CanUnhold)
             {
                 terminalConn.Unhold();
@@ -366,6 +373,13 @@ class ConnectionSocket
             if (conn[0].Capabilities.CanDisconnect)
             {
                 conn[0].Disconnect();
+                conn = null;
+                contact = null;
+                Console.WriteLine("Call disconnected");
+            }
+            else if (conn[1].Capabilities.CanDisconnect)
+            {
+                conn[1].Disconnect();
                 conn = null;
                 contact = null;
                 Console.WriteLine("Call disconnected");
@@ -421,7 +435,8 @@ class ConnectionSocket
         Console.WriteLine("Called: " + called);
         Console.WriteLine("Calling Address: " + callingAddress);
         Console.WriteLine("Type: " + ct);
-        if(conn[0].ToString().Contains("300"))
+        perm = conn[0].Permissions;
+        if (perm.ToString() != "Identify")
             terminalConn = conn[0].TerminalConnections[0];
         else
             terminalConn = conn[1].TerminalConnections[0];
@@ -434,9 +449,10 @@ class ConnectionSocket
     //Close socket connection
     private void closeConnection()
     {
-      ConnectedSocket.Shutdown(SocketShutdown.Both);
-      ConnectedSocket.Close();
-      Console.WriteLine("Client Disconnected\n");
+        ConnectedSocket.Shutdown(SocketShutdown.Both);
+        ConnectedSocket.Close();
+        myToolkit.Disconnect();
+        Console.WriteLine("Client Disconnected\n");
     }
 }//end class
 
