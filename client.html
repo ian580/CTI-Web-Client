@@ -34,12 +34,12 @@
 			var message;
 			var orig = document.originate.origNumber.value;
 			message = "originate " + orig + " " + document.ter.addresses.value + " " + document.ter.terminals.value;
-			//alert(message);
 			websocket.send(message);
 		}
 		
 		var onHold = false;
 		var muted = false;
+		var trans = false;
 		function doSendCallControl(i){
 			var control;
 			if(i == 1){
@@ -48,6 +48,7 @@
 				document.callControls.answerCall.disabled = true;
 				document.callControls.holdCall.disabled = false;
 				document.callControls.muteCall.disabled = false;
+				document.callControls.transferCall.disabled = false;
 				
 			}
 			else if(i == 2){
@@ -64,8 +65,20 @@
 					document.callControls.holdCall.value="Hold";
 				}
 			}
-			else if(i == 3)
-				control = "transfer";
+			else if(i == 3){
+				if(!trans){
+					var orig = document.originate.origNumber.value;
+					control = "transfer " + orig;
+					document.callControls.transferCall.value="Complete";
+					trans = true;
+				}
+				else{
+					control = "complete";
+					document.callControls.transferCall.value="Transfer";
+					trans = false;
+				}
+				
+			}
 			else if(i == 4){
 				document.getElementById("calling").innerHTML="";
 				document.getElementById("called").innerHTML="";
@@ -77,6 +90,7 @@
 				document.callControls.holdCall.disabled = true;
 				document.callControls.muteCall.disabled = true;
 				document.callControls.answerCall.disabled = true;
+				document.callControls.transferCall.disabled = true;
 				control = "release";
 			}
 			else if(i == 5){
@@ -93,7 +107,7 @@
 			}
 			else if(i == 6)
 				control = "conf";
-			//alert("Sending " + control);
+			
 			websocket.send(control);
 		}
 
@@ -123,6 +137,9 @@
 				document.callControls.releaseCall.disabled = true;
 				document.callControls.holdCall.disabled = true;
 				document.callControls.muteCall.disabled = true;
+				document.callControls.transferCall.disabled = true;
+				document.callControls.answerCall.disabled = true;
+				
 			}
         }
 		
@@ -133,12 +150,14 @@
 			else if(state == "Established" && document.getElementById("localState").innerHTML != "Ringing"){
 				document.callControls.holdCall.disabled = false;
 				document.callControls.muteCall.disabled = false;
+				document.callControls.transferCall.disabled = false;
 			}
 			else if(state == "Disconnected"){
 				document.callControls.releaseCall.disabled = true;
 				document.callControls.holdCall.disabled = true;
 				document.callControls.muteCall.disabled = true;
 				document.callControls.answerCall.disabled = true;
+				document.callControls.transferCall.disabled = true;
 			}
 			
 			
@@ -155,22 +174,18 @@
 		}
 				
 		function onMessage(evt){
-			//window.alert("message received: " + evt.data);
 			if(evt.data.indexOf("Line") >= 0)
 				addTerminals(evt.data);
 			else if(evt.data.length == 4)
 				addAddress(evt.data);
 			else if(evt.data.indexOf("properties") >= 0)
 				contactProperties(evt.data);
-			else if(evt.data.indexOf("local") >=0){
-				//setCallControls1(evt.data);
+			else if(evt.data.indexOf("local") >=0)
 				updateLocalState(evt.data);
-			}
-			else if(evt.data.indexOf("remote")>=0){
-				//setCallControls1(evt.data);
+			else if(evt.data.indexOf("remote")>=0)
 				updateRemoteState(evt.data);
-			}
-		
+			else if(evt.data.indexOf("Error")>=0)
+				alert(evt.data);
 			
 		}
 
@@ -215,18 +230,24 @@
 		}
 		
 		function contactProperties(properties){
-			var addr = document.ter.addresses;
-			var sel = addr.selectedIndex;
-			var termIndex = document.ter.terminals.selectedIndex;
-			var term = document.ter.terminals.options[termIndex].text;
+			//var termIndex = document.ter.terminals.selectedIndex;
+			//var term = document.ter.terminals.options[termIndex].text;
 			var split = properties.split(" ");
 			var called = split[1];
 			var calling = split[2];
+			var termIndex = calling.charAt(3);
+			var addr = calling;
+			if(termIndex>3){
+				termIndex = called.charAt(3);
+				addr = called;
+			}
+			
+			var term = document.ter.terminals.options[termIndex].text;
 			var type = split[3];
 			var localState = split[4];
-			var calling = addr.options[sel].text;
+			
 			var terminalAddress;
-			terminalAddress = term + " / " + calling;
+			terminalAddress = term + " / " + addr;
 			document.getElementById("calling").innerHTML=calling
 			document.getElementById("called").innerHTML=called;
 			document.getElementById("type").innerHTML=type;
@@ -243,6 +264,7 @@
 				document.callControls.answerCall.disabled = false;
 				document.callControls.holdCall.disabled = true;
 				document.callControls.muteCall.disabled = true;
+				document.callControls.transferCall.disabled = true;
 				
 			}
 				

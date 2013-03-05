@@ -30,15 +30,13 @@ class ConnectionSocket
         ConnectedSocket = socket;
         dataBuffer = new byte[1024];
         dataString = new StringBuilder();
-        //GUID = System.Guid.NewGuid();
         if(connectCCT())
         {
-          myTerminals = getTerminals();
-          myAddresses = getAddresses();
-          sendTerminals();
-          sendAddresses();
-          createEventHandlers();
-
+            myTerminals = getTerminals();
+            myAddresses = getAddresses();
+            sendTerminals();
+            sendAddresses();
+            createEventHandlers();
         }
         Listen();
            
@@ -80,6 +78,7 @@ class ConnectionSocket
         catch (OperationFailureException ofe)
         {
             Console.WriteLine("Failed to connect to server. Error: " + ofe.Error.ToString() );
+           
             Thread.Sleep(10000);
             Console.WriteLine("Retrying...");
             connectCCT();
@@ -113,13 +112,14 @@ class ConnectionSocket
 
     private void OnSessionDisconnectedEvent(SessionDisconnectedEventArgs e)
     {
-      Console.WriteLine("Lost connection to CCT server");
-      while (!myToolkit.IsConnected)
-      {
-        Console.WriteLine("Attempting to restore connection...");
-        connectCCT();
-        Thread.Sleep(10000);
-      }
+        Console.WriteLine("Lost connection to CCT server");
+        send("Error: Lost connection to CCT server");
+        while (!myToolkit.IsConnected)
+        {
+            Console.WriteLine("Attempting to restore connection...");
+            connectCCT();
+            Thread.Sleep(10000);
+        }
     }
     
     //get assigned terminals
@@ -149,7 +149,7 @@ class ConnectionSocket
     //send addresses to client
     private void sendAddresses()
     {
-      for (int i = 0; i < 5; i++)
+      for (int i = 0; i < 4; i++)
       {
         string sAddress = myAddresses[i].ToString();
         send(sAddress);
@@ -158,7 +158,6 @@ class ConnectionSocket
 
     private void onTermConnStateChanged(TermConnStateEventArgs e)
     {
-        //Console.WriteLine("TerminalConnection to terminal {0} is now in the {1} state.", e.Sender.Name, e.NewState);
         send("local" + e.NewState.ToString());
     }
   
@@ -169,7 +168,6 @@ class ConnectionSocket
 
     private void onConnectionStateChange(ConnectionStateEventArgs args)
     {
-        Console.WriteLine("Remote connection to address {0} is now in the {1} state.", args.Address.Name, args.NewState);
         send("remote" + args.NewState.ToString());
     }
 
@@ -188,8 +186,8 @@ class ConnectionSocket
         contact = null;
     }
 
-    
 
+    IContact transfer = null;
     //invoked when message received from client
     private void OnReceive(IAsyncResult result)
     {
@@ -226,10 +224,10 @@ class ConnectionSocket
             //convert message bytes to characters and append to dataString
             dataString.Append(Encoding.UTF8.GetString(message));
             string msg = dataString.ToString();
-            //Console.WriteLine(msg);
-
+            
             dataString = null;
             dataString = new StringBuilder();
+            
             
             //Call method based on content of msg
             if (msg == "answer")
@@ -238,8 +236,10 @@ class ConnectionSocket
                 holdCall();
             else if (msg == "unhold")
                 unholdCall();
-            else if (msg == "transfer")
-                transferCall();
+            else if (msg.Contains("transfer"))
+                transfer = transferCall(msg);
+            else if (msg == "complete")
+                completeTransfer(transfer);
             else if (msg == "release")
                 releaseCall();
             else if (msg == "mute")
@@ -271,11 +271,10 @@ class ConnectionSocket
         addr = int.Parse(s[2]) - 1;
         term = int.Parse(s[3]) - 1;
          
-        Console.WriteLine("Originate call method");
         Console.WriteLine("Dest: " + number + " Terminal: {0} Address: {1}", term, addr);
         if (myAddresses[addr].Capabilities.CanOriginate)
         {
-            
+
             try
             {
                 myTerminals[term].Originate(myAddresses[addr], number);
@@ -283,10 +282,14 @@ class ConnectionSocket
             catch (OperationFailureException ofe)
             {
                 Console.WriteLine("Originate call failed: " + ofe.Error.ToString());
+                send("Error: Originate call failed");
             }
         }
         else
-          Console.WriteLine("Address cannot originate");
+        {
+            Console.WriteLine("Address cannot originate");
+            send("Error: Address cannot originate");
+        }
         
     }
 
@@ -308,9 +311,12 @@ class ConnectionSocket
             {
                 Console.WriteLine(e.Error.ToString());
             }
-         }
-         else
+        }
+        else
+        {
             Console.WriteLine("Cannot answer call");
+            send("Error: Cannot answer call");
+        }
      }
     
 
@@ -337,7 +343,11 @@ class ConnectionSocket
                 }
             }
             else
+            {
                 Console.WriteLine("Cannot Hold Call");
+                send("Error: Cannot Hold Call");
+            }
+
         }
     }
 
@@ -356,15 +366,76 @@ class ConnectionSocket
                 Console.WriteLine("Call Unheld");
             }
             else
+            {
                 Console.WriteLine("Cannot Unhold call");
+                send("Error: Cannot Unhold call");
+            }
 
         }
     }
 
-    private void transferCall()
+    private IContact transferCall(string message)
     {
-        Console.WriteLine("Transfer call method");
+
+        string number;
+        string[] s = message.Split(' ');
+        number = s[1];
+        IContact trans = null;
+        
+        AccessPermissions perm = conn[0].Permissions;
+        if (conn != null)
+        {
+            if (perm.ToString() != "Identify")
+                terminalConn = conn[0].TerminalConnections[0];
+            else
+                terminalConn = conn[1].TerminalConnections[0];
+            if (terminalConn.Capabilities.CanInitiateTransfer)
+            {
+                trans = terminalConn.InitiateSupervisedTransfer(number);
+                Console.WriteLine("Transfer Initiated");
+                
+            }
+            else
+            {
+                Console.WriteLine("Cannot transfer call");
+                send("Error: Cannot transfer call");
+            }
+
+        }
+        return trans;
     }
+
+    private void completeTransfer(IContact trans)
+    {
+        AccessPermissions perm = conn[0].Permissions;
+        if (conn != null)
+        {
+            if (perm.ToString() != "Identify")
+                terminalConn = conn[0].TerminalConnections[0];
+            else
+                terminalConn = conn[1].TerminalConnections[0];
+            if (terminalConn.Capabilities.CanCompleteTransfer)
+            {
+                terminalConn.CompleteSupervisedTransfer(trans);
+                Console.WriteLine("Transfer Completed");
+
+            }
+            else
+            {
+                Console.WriteLine("Cannot transfer call");
+                send("Error: Cannot transfer call");
+            }
+        }
+        //IConnection[] connection = trans.Connections;
+        //AccessPermissions perm = connection[0].Permissions;
+        //if (perm.ToString() != "Identify")
+        //    connection[0].TerminalConnections[0].CompleteSupervisedTransfer(trans);
+        //else
+        //    connection[1].TerminalConnections[0].CompleteSupervisedTransfer(trans);
+
+       
+    }
+
     private void releaseCall()
     {
         Console.WriteLine("Release call method");
@@ -385,7 +456,10 @@ class ConnectionSocket
                 Console.WriteLine("Call disconnected");
             }
             else
+            {
                 Console.WriteLine("Cannot Disconnect");
+                send("Error: Cannot disconnect");
+            }
         }
     }
 
@@ -404,7 +478,10 @@ class ConnectionSocket
                 Console.WriteLine("Call Muted");
             }
             else
+            {
                 Console.WriteLine("Cannot Mute Call");
+                send("Error: Cannot mute call");
+            }
         }
     }
 
@@ -423,7 +500,10 @@ class ConnectionSocket
                 Console.WriteLine("Call Unmuted");
             }
             else
+            {
                 Console.WriteLine("Cannot Unmute Call");
+                send("Error: Cannot unmute call");
+            }
         }
     }
 
@@ -457,7 +537,6 @@ class ConnectionSocket
     {
         ConnectedSocket.Shutdown(SocketShutdown.Both);
         ConnectedSocket.Close();
-        myToolkit.Disconnect();
         Console.WriteLine("Client Disconnected\n");
     }
 }//end class
