@@ -391,10 +391,13 @@ class ConnectionSocket
 
     private void muteCall()
     {
-        Console.WriteLine("Mute call method");
+        AccessPermissions perm = conn[0].Permissions;
         if (conn != null)
         {
-            terminalConn = conn[0].TerminalConnections[0];
+            if (perm.ToString() != "Identify")
+                terminalConn = conn[0].TerminalConnections[0];
+            else
+                terminalConn = conn[1].TerminalConnections[0];
             if (terminalConn.Capabilities.CanMute && !terminalConn.IsMuted)
             {
                 terminalConn.Mute();
@@ -407,10 +410,13 @@ class ConnectionSocket
 
     private void unMuteCall()
     {
-        Console.WriteLine("UnMute call method");
+        AccessPermissions perm = conn[0].Permissions;
         if (conn != null)
         {
-            terminalConn = conn[0].TerminalConnections[0];
+            if (perm.ToString() != "Identify")
+                terminalConn = conn[0].TerminalConnections[0];
+            else
+                terminalConn = conn[1].TerminalConnections[0];
             if (terminalConn.IsMuted)
             {
                 terminalConn.Hold();

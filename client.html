@@ -42,8 +42,14 @@
 		var muted = false;
 		function doSendCallControl(i){
 			var control;
-			if(i == 1)
+			if(i == 1){
 				control = "answer";
+				document.callControls.releaseCall.disabled = false;
+				document.callControls.answerCall.disabled = true;
+				document.callControls.holdCall.disabled = false;
+				document.callControls.muteCall.disabled = false;
+				
+			}
 			else if(i == 2){
 				if(!onHold){
 					control = "hold";
@@ -70,6 +76,7 @@
 				document.callControls.releaseCall.disabled = true;
 				document.callControls.holdCall.disabled = true;
 				document.callControls.muteCall.disabled = true;
+				document.callControls.answerCall.disabled = true;
 				control = "release";
 			}
 			else if(i == 5){
@@ -119,10 +126,11 @@
 			}
         }
 		
+		
 		function setCallControls(state){
 			if(state == "Alerting")
 				document.callControls.releaseCall.disabled = false;
-			else if(state == "Established"){
+			else if(state == "Established" && document.getElementById("localState").innerHTML != "Ringing"){
 				document.callControls.holdCall.disabled = false;
 				document.callControls.muteCall.disabled = false;
 			}
@@ -130,10 +138,10 @@
 				document.callControls.releaseCall.disabled = true;
 				document.callControls.holdCall.disabled = true;
 				document.callControls.muteCall.disabled = true;
+				document.callControls.answerCall.disabled = true;
 			}
 			
-			//document.callControls.answerCall.disabled = !isConnected;
-        	
+			
         	//document.callControls.transferCall.disabled = !isConnected;
         	
         	
@@ -154,10 +162,15 @@
 				addAddress(evt.data);
 			else if(evt.data.indexOf("properties") >= 0)
 				contactProperties(evt.data);
-			else if(evt.data.indexOf("local") >=0)
+			else if(evt.data.indexOf("local") >=0){
+				//setCallControls1(evt.data);
 				updateLocalState(evt.data);
-			else if(evt.data.indexOf("remote")>=0)
+			}
+			else if(evt.data.indexOf("remote")>=0){
+				//setCallControls1(evt.data);
 				updateRemoteState(evt.data);
+			}
+		
 			
 		}
 
@@ -226,7 +239,13 @@
 			document.getElementById("localState").innerHTML=state;
 			if(state == "Dropped")
 				window.setTimeout("clearCallInfo()", 100);
-			
+			else if(state == "Ringing"){
+				document.callControls.answerCall.disabled = false;
+				document.callControls.holdCall.disabled = true;
+				document.callControls.muteCall.disabled = true;
+				
+			}
+				
 		}
 		
 		function clearCallInfo(){
@@ -299,7 +318,7 @@
 	<form name="callControls">
 		<table>
 			<tr>
-				<td><input type="button" name="answerCall" value="Answer" class="buttons" onclick="doSendCallControl(1);"></td>
+				<td><input type="button" name="answerCall" value="Answer" class="buttons" onclick="doSendCallControl(1);" disabled></td>
 				<td><input type="button" name="holdCall" value="Hold" class="buttons" onclick="doSendCallControl(2);" disabled></td>
 				<td><input type="button" name="transferCall" value="Transfer" class="buttons" onclick="doSendCallControl(3);" disabled></td>
 			</tr>
