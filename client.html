@@ -40,6 +40,7 @@
 		var onHold = false;
 		var muted = false;
 		var trans = false;
+		var conf = false;
 		function doSendCallControl(i){
 			var control;
 			if(i == 1){
@@ -49,6 +50,7 @@
 				document.callControls.holdCall.disabled = false;
 				document.callControls.muteCall.disabled = false;
 				document.callControls.transferCall.disabled = false;
+				document.callControls.conferenceCall.disabled = false;
 				
 			}
 			else if(i == 2){
@@ -91,6 +93,7 @@
 				document.callControls.muteCall.disabled = true;
 				document.callControls.answerCall.disabled = true;
 				document.callControls.transferCall.disabled = true;
+				document.callControls.conferenceCall.disabled = true;
 				control = "release";
 			}
 			else if(i == 5){
@@ -105,8 +108,19 @@
 					document.callControls.muteCall.value = "Mute";
 				}
 			}
-			else if(i == 6)
-				control = "conf";
+			else if(i == 6){
+				if(!conf){
+					var orig = document.originate.origNumber.value;
+					control = "conf " + orig;
+					document.callControls.conferenceCall.value="Complete";
+					conf = true;
+				}
+				else{
+					control = "completeConf";
+					document.callControls.conferenceCall.value="Conf.";
+					conf = true;
+				}
+			}
 			
 			websocket.send(control);
 		}
@@ -139,6 +153,7 @@
 				document.callControls.muteCall.disabled = true;
 				document.callControls.transferCall.disabled = true;
 				document.callControls.answerCall.disabled = true;
+				document.callControls.conferenceCall.disabled = true;
 				
 			}
         }
@@ -151,6 +166,7 @@
 				document.callControls.holdCall.disabled = false;
 				document.callControls.muteCall.disabled = false;
 				document.callControls.transferCall.disabled = false;
+				document.callControls.conferenceCall.disabled = false;
 			}
 			else if(state == "Disconnected"){
 				document.callControls.releaseCall.disabled = true;
@@ -158,13 +174,9 @@
 				document.callControls.muteCall.disabled = true;
 				document.callControls.answerCall.disabled = true;
 				document.callControls.transferCall.disabled = true;
+				document.callControls.conferenceCall.disabled = true;
 			}
 			
-			
-        	//document.callControls.transferCall.disabled = !isConnected;
-        	
-        	
-        	//document.callControls.ConferenceCall.disabled = !isConnected;
 		}
 
 		function onClose(evt){
@@ -265,6 +277,7 @@
 				document.callControls.holdCall.disabled = true;
 				document.callControls.muteCall.disabled = true;
 				document.callControls.transferCall.disabled = true;
+				document.callControls.conferenceCall.disabled = true;
 				
 			}
 				
@@ -347,7 +360,7 @@
 			<tr>
 				<td><input type="button" name="releaseCall" value="Release" class="buttons" onclick="doSendCallControl(4);" disabled></td>
 				<td><input type="button" name="muteCall" value="Mute" class="buttons" onclick="doSendCallControl(5);" disabled></td>
-				<td><input type="button" name="ConferenceCall" value="Conf." class="buttons" onclick="doSendCallControl(6);" disabled></td>
+				<td><input type="button" name="conferenceCall" value="Conf." class="buttons" onclick="doSendCallControl(6);" disabled></td>
 			</tr>
 		</table>
 	</form>

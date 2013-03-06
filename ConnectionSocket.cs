@@ -188,6 +188,7 @@ class ConnectionSocket
 
 
     IContact transfer = null;
+    IContact conference = null;
     //invoked when message received from client
     private void OnReceive(IAsyncResult result)
     {
@@ -246,8 +247,10 @@ class ConnectionSocket
                 muteCall();
             else if (msg == "unmute")
                 unMuteCall();
-            else if (msg == "conf")
-                conferenceCall();
+            else if (msg.Contains("conf"))
+                conference = conferenceCall(msg);
+            else if (msg == "completeConf")
+                completeConference(conference);
             else if (msg.Contains("originate"))
                 originateCall(msg);
             else if (msg == "")
@@ -373,7 +376,7 @@ class ConnectionSocket
 
         }
     }
-
+    ITerminalConnection transferTerminalConn;
     private IContact transferCall(string message)
     {
 
@@ -386,19 +389,19 @@ class ConnectionSocket
         if (conn != null)
         {
             if (perm.ToString() != "Identify")
-                terminalConn = conn[0].TerminalConnections[0];
+                transferTerminalConn = conn[0].TerminalConnections[0];
             else
-                terminalConn = conn[1].TerminalConnections[0];
-            if (terminalConn.Capabilities.CanInitiateTransfer)
+                transferTerminalConn = conn[1].TerminalConnections[0];
+            if (transferTerminalConn.Capabilities.CanInitiateTransfer)
             {
-                trans = terminalConn.InitiateSupervisedTransfer(number);
+                trans = transferTerminalConn.InitiateSupervisedTransfer(number);
                 Console.WriteLine("Transfer Initiated");
                 
             }
             else
             {
-                Console.WriteLine("Cannot transfer call");
-                send("Error: Cannot transfer call");
+                Console.WriteLine("Cannot initiate transfer call");
+                send("Error: Cannot initiate transfer call");
             }
 
         }
@@ -407,33 +410,67 @@ class ConnectionSocket
 
     private void completeTransfer(IContact trans)
     {
+        
+        if (transferTerminalConn.Capabilities.CanCompleteTransfer)
+        {
+            transferTerminalConn.CompleteSupervisedTransfer(trans);
+            Console.WriteLine("Transfer Completed");
+            transferTerminalConn = null;
+        }
+        else
+        {
+            Console.WriteLine("Cannot complete transfer call");
+            send("Error: Cannot complete transfer call");
+        }
+        
+    }
+    
+    ITerminalConnection conferenceTerminalConn;
+    private IContact conferenceCall(string message)
+    {
+        string number;
+        string[] s = message.Split(' ');
+        number = s[1];
+        IContact conf = null;
+
         AccessPermissions perm = conn[0].Permissions;
         if (conn != null)
         {
             if (perm.ToString() != "Identify")
-                terminalConn = conn[0].TerminalConnections[0];
+                conferenceTerminalConn = conn[0].TerminalConnections[0];
             else
-                terminalConn = conn[1].TerminalConnections[0];
-            if (terminalConn.Capabilities.CanCompleteTransfer)
+                conferenceTerminalConn = conn[1].TerminalConnections[0];
+            if (conferenceTerminalConn.Capabilities.CanInitiateConference)
             {
-                terminalConn.CompleteSupervisedTransfer(trans);
-                Console.WriteLine("Transfer Completed");
+                conf = conferenceTerminalConn.InitiateConference(number);
+                Console.WriteLine("Conference Initiated");
 
             }
             else
             {
-                Console.WriteLine("Cannot transfer call");
-                send("Error: Cannot transfer call");
+                Console.WriteLine("Cannot create conference call");
+                send("Error: Cannot create conference call");
             }
+
         }
-        //IConnection[] connection = trans.Connections;
-        //AccessPermissions perm = connection[0].Permissions;
-        //if (perm.ToString() != "Identify")
-        //    connection[0].TerminalConnections[0].CompleteSupervisedTransfer(trans);
-        //else
-        //    connection[1].TerminalConnections[0].CompleteSupervisedTransfer(trans);
+        return conf;
+    }
+    
+    private void completeConference(IContact conf)
+    {
+        
+        if (conferenceTerminalConn.Capabilities.CanCompleteTransfer)
+        {
+            conferenceTerminalConn.CompleteSupervisedTransfer(conf);
+            Console.WriteLine("Conference Completed");
+            conferenceTerminalConn = null;
+        }
+        else
+        {
+            Console.WriteLine("Cannot complete conference call");
+            send("Error: Cannot complete conference call");
+        }
 
-       
     }
 
     private void releaseCall()
@@ -507,10 +544,7 @@ class ConnectionSocket
         }
     }
 
-    private void conferenceCall()
-    {
-        Console.WriteLine("Conference call method");
-    }
+
 
     private void getContactProperties()
     {
