@@ -76,6 +76,12 @@
 				}
 				else{
 					control = "complete";
+					document.callControls.releaseCall.disabled = true;
+					document.callControls.holdCall.disabled = true;
+					document.callControls.muteCall.disabled = true;
+					document.callControls.answerCall.disabled = true;
+					document.callControls.transferCall.disabled = true;
+					document.callControls.conferenceCall.disabled = true;
 					document.callControls.transferCall.value="Transfer";
 					trans = false;
 				}
@@ -118,7 +124,7 @@
 				else{
 					control = "completeConf";
 					document.callControls.conferenceCall.value="Conf.";
-					conf = true;
+					conf = false;
 				}
 			}
 			

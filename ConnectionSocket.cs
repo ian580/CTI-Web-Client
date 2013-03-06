@@ -459,9 +459,9 @@ class ConnectionSocket
     private void completeConference(IContact conf)
     {
         
-        if (conferenceTerminalConn.Capabilities.CanCompleteTransfer)
+        if (conferenceTerminalConn.Capabilities.CanCompleteConference)
         {
-            conferenceTerminalConn.CompleteSupervisedTransfer(conf);
+            conferenceTerminalConn.CompleteConference(conf);
             Console.WriteLine("Conference Completed");
             conferenceTerminalConn = null;
         }
