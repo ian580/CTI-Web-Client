@@ -17,8 +17,8 @@ class ConnectionSocket
     private Toolkit myToolkit = null;
     private ISession mySession = null;
     private ITerminal[] myTerminals;
-    private IAddress[] myAddresses;
-    private IContact contact;
+    public IAddress[] myAddresses;
+    public IContact contact;
     private IConnection[] conn = null;
     private ITerminalConnection terminalConn = null;
     private AccessPermissions perm;
@@ -42,6 +42,12 @@ class ConnectionSocket
            
     }
 
+    public ConnectionSocket()
+    {
+        dataBuffer = new byte[1024];
+        dataString = new StringBuilder();
+    }
+
     //listens for messages from client
     private void Listen()
     {
@@ -49,16 +55,24 @@ class ConnectionSocket
     }
     
     //method to send message to client
-    private void send(String message)
+    public void send(String message)
     {
-      byte[] msg = Encoding.UTF8.GetBytes(message);
-      int size = msg.Length + 2;//need two bytes for message type and length
-      byte[] sending = new byte[size];
-      sending[0] = (byte)129;//message type(string)
-      sending[1] = (byte)msg.Length;//message length
-      for (int i = 0; i < size-2; i++)
-        sending[i + 2] = msg[i];
-      int byteCount = ConnectedSocket.Send(sending);
+        byte[] msg = encode(message);
+        
+        int byteCount = ConnectedSocket.Send(msg);
+        //return sending;  
+    }
+
+    public byte[] encode(String message)
+    {
+        byte[] msg = Encoding.UTF8.GetBytes(message);
+        int size = msg.Length + 2;//need two bytes for message type and length
+        byte[] sending = new byte[size];
+        sending[0] = (byte)129;//message type(string)
+        sending[1] = (byte)msg.Length;//message length
+        for (int i = 0; i < size - 2; i++)
+            sending[i + 2] = msg[i];
+        return sending;
     }
     
     //connect to CCT
@@ -123,7 +137,7 @@ class ConnectionSocket
     }
     
     //get assigned terminals
-    private ITerminal[] getTerminals()
+    public ITerminal[] getTerminals()
     {
       ITerminal[] myTerminals = mySession.Terminals;
       return myTerminals;
@@ -195,40 +209,7 @@ class ConnectionSocket
         int sizeOfReceivedData = ConnectedSocket.EndReceive(result);
         if (sizeOfReceivedData > 0)
         {
-            /*dataBuffer is a byte array containing the received message
-             * sizeOfReceivedData gives the number of bytes received
-             * The first byte is the type of data - since only string messages are being sent it will always be 129
-             * The second byte gives length - will always be one byte in this case as messages are short
-             * The next 4 bytes are the masks for decoding the message
-             * The remaining bytes are the actual message*/ 
-            
-            int start = 6;//start position of data
-            
-            //get masks bytes
-            int maskIndex = 2;
-            byte[] masks = new byte[4];
-            for(int i = maskIndex, j = 0; i < (maskIndex + 4); i++)
-            {
-                masks[j] = dataBuffer[i];
-                j++;
-            }
-
-            //get message bytes and decode using the masks
-            int messageLength = sizeOfReceivedData - start;
-            byte[] message = new byte[messageLength];
-
-            for(int i = start, j = 0; i < sizeOfReceivedData; i++, j++)
-            {
-                message[j] = (byte) (dataBuffer[i] ^ masks[j % 4]);
-            }
-            
-            //convert message bytes to characters and append to dataString
-            dataString.Append(Encoding.UTF8.GetString(message));
-            string msg = dataString.ToString();
-            
-            dataString = null;
-            dataString = new StringBuilder();
-            
+            string msg = decode(dataBuffer, sizeOfReceivedData);
             
             //Call method based on content of msg
             if (msg == "answer")
@@ -263,8 +244,46 @@ class ConnectionSocket
         
     }//end on receive
 
+    public string decode(byte[] buffer, int size)
+    {
+        /*dataBuffer is a byte array containing the received message
+             * sizeOfReceivedData gives the number of bytes received
+             * The first byte is the type of data - since only string messages are being sent it will always be 129
+             * The second byte gives length - will always be one byte in this case as messages are short
+             * The next 4 bytes are the masks for decoding the message
+             * The remaining bytes are the actual message*/
+
+        int start = 6;//start position of data
+
+        //get masks bytes
+        int maskIndex = 2;
+        byte[] masks = new byte[4];
+        for (int i = maskIndex, j = 0; i < (maskIndex + 4); i++)
+        {
+            masks[j] = buffer[i];
+            j++;
+        }
+
+        //get message bytes and decode using the masks
+        int messageLength = size - start;
+        byte[] message = new byte[messageLength];
+
+        for (int i = start, j = 0; i < size; i++, j++)
+        {
+            message[j] = (byte)(buffer[i] ^ masks[j % 4]);
+        }
+
+        //convert message bytes to characters and append to dataString
+        dataString.Append(Encoding.UTF8.GetString(message));
+        string msg = dataString.ToString();
+
+        dataString = null;
+        dataString = new StringBuilder();
+        return msg;
+    }
+
     //method to originate calls
-    private void originateCall(string message)
+    public void originateCall(string message)
     { 
         string number;
         int addr, term;
@@ -473,7 +492,7 @@ class ConnectionSocket
 
     }
 
-    private void releaseCall()
+    public void releaseCall()
     {
         Console.WriteLine("Release call method");
         if (conn != null)
@@ -495,8 +514,13 @@ class ConnectionSocket
             else
             {
                 Console.WriteLine("Cannot Disconnect");
-                send("Error: Cannot disconnect");
+                //send("Error: Cannot disconnect");
             }
+        }
+        else
+        {
+            Console.WriteLine("No Connection");
+            //send("Error: No Connection");
         }
     }
 
