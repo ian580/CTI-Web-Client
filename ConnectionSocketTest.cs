@@ -15,6 +15,7 @@ class ConnectionSocketTest
     [SetUp]
     public void setUp()
     {
+        //use test constuctor so that no CCT connection is made
         test = new ConnectionSocket();
     }   
 

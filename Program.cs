@@ -18,9 +18,11 @@ namespace ConsoleApplication1
         [STAThread]
         static void Main(string[] args)
         {
+            //if mutex variable is set then exit immediately
             if (mutex.WaitOne(TimeSpan.Zero, true))
             {
                 serverSocket.Bind(new IPEndPoint(IPAddress.Any, 8080));
+                //listen for incoming connections
                 serverSocket.Listen(128);
                 serverSocket.BeginAccept(null, 0, OnAccept, null);
 
@@ -30,17 +32,18 @@ namespace ConsoleApplication1
             }
         }
 
+        //When socket connection is accepted
         private static void OnAccept(IAsyncResult result)
         {
             
             try
             {
                 Socket client = null;
-                
                 if (serverSocket != null && serverSocket.IsBound)
                 {
                     client = serverSocket.EndAccept(result);
                     handShake(client);//carry out handshake
+                    //create ConnectionSocket instance for new client
                     ConnectionSocket clientConnection = new ConnectionSocket(client);
                 }
             }
@@ -52,19 +55,23 @@ namespace ConsoleApplication1
             {
                 if (serverSocket != null && serverSocket.IsBound)
                 {
+                    //listen for more clients
                     serverSocket.BeginAccept(null, 0, OnAccept, null);
                 }
             }
         }//end OnAccept
 
+        //method to generate web socket accept key
         private static string AcceptKey(ref string key)
         {
             string longKey = key + guid;
             byte[] hashBytes = ComputeHash(longKey);
+            //encode the hashed key
             return Convert.ToBase64String(hashBytes);
         }
 
         static SHA1 sha1 = SHA1CryptoServiceProvider.Create();
+        //hash key
         private static byte[] ComputeHash(string str)
         {
             return sha1.ComputeHash(System.Text.Encoding.ASCII.GetBytes(str));

@@ -18,7 +18,6 @@
 	</style>
     <script type="text/javascript">
 
-        //function to create web socket connection
         function doConnect() {
             websocket = new WebSocket("ws://localhost:8080/service");
 			websocket.onopen = function(evt) { onOpen(evt) };
@@ -27,15 +26,13 @@
 			websocket.onerror = function(evt) { onError(evt) };
 		}
 
-		//function to close connection
 		function doDisconnect(){
 			websocket.close();
 		}
 
-		//function to send message to originate call
 		function doOrigSend(){
 			var message;
-			var orig = document.originate.origNumber.value;//destination address
+			var orig = document.originate.origNumber.value;
 			message = "originate " + orig + " " + document.ter.addresses.value + " " + document.ter.terminals.value;
 			websocket.send(message);
 		}
@@ -44,8 +41,6 @@
 		var muted = false;
 		var trans = false;
 		var conf = false;
-
-		//function that manages call controls
 		function doSendCallControl(i){
 			var control;
 			if(i == 1){
@@ -92,7 +87,6 @@
 				}
 
 			}
-			//when call is realeased clear display & disable buttons
 			else if(i == 4){
 				document.getElementById("calling").innerHTML="";
 				document.getElementById("called").innerHTML="";
@@ -134,18 +128,15 @@
 				}
 			}
 
-			//send call control message to server
 			websocket.send(control);
 		}
 
-		//event that fires when cpnnection is accepted
 		function onOpen(evt){
         	window.alert("Connected");
         	clientStatus.innerHTML = "The client is connected";
         	setButtons(true);
         }
 
-        //function to set buttons and display based on connection status of client
         function setButtons(isConnected){
         	document.connect.connect.disabled = isConnected;
         	document.connect.disconnect.disabled = !isConnected;
@@ -174,7 +165,6 @@
         }
 
 
-		//updates interface based on call state changes
 		function setCallControls(state){
 			if(state == "Alerting")
 				document.callControls.releaseCall.disabled = false;
@@ -195,43 +185,33 @@
 
 		}
 
-		//event that fires when socket connection is closed
 		function onClose(evt){
 			window.alert("Disconnected");
 			clientStatus.innerHTML = "The client is disconnected";
 			setButtons(false);
 		}
 
-		//function to manage recieved messages
 		function onMessage(evt){
-			//if message contains Line then terminals are being received
 			if(evt.data.indexOf("Line") >= 0)
 				addTerminals(evt.data);
-			//if message has length of 4 then addresses are being received
 			else if(evt.data.length == 4)
 				addAddress(evt.data);
-			//receiving properties of call
 			else if(evt.data.indexOf("properties") >= 0)
 				contactProperties(evt.data);
-			//receiving new local state
 			else if(evt.data.indexOf("local") >=0)
 				updateLocalState(evt.data);
-			//receiving new remote state
 			else if(evt.data.indexOf("remote")>=0)
 				updateRemoteState(evt.data);
-			//receiving error message
 			else if(evt.data.indexOf("Error")>=0)
 				alert(evt.data);
 
 		}
 
-		//event that fires if a web socket error occurs
 		function onError (evt){
 			window.alert("Error: " + evt.data);
 		}
 
 		var i = 1;
-		//adds received terminals to select input
 		function addTerminals(terminal){
 			var form = document.ter;
 			var newOption = document.createElement("OPTION");
@@ -242,7 +222,6 @@
 		}
 
 		var j = 1;
-		//adds received addresses to select input
 		function addAddress(address){
 			var form = document.ter;
 			var newOption = document.createElement("option");
@@ -252,14 +231,12 @@
 			j++;
 		}
 
-		//clears select inputs of address or terminals
 		function removeOptions(selectBox){
 			var k;
 			for(k=selectBox.options.length-1; k>=0; k--)
 				selectBox.remove(k);
 		}
 
-		//functions to ensure selected termianl/address match
 		function selectTerminal(){
 			var i = document.ter.addresses.selectedIndex;
 			document.ter.terminals.selectedIndex = i;
@@ -270,8 +247,9 @@
 			document.ter.addresses.selectedIndex = i;
 		}
 
-		//updates display with contact properties
 		function contactProperties(properties){
+			//var termIndex = document.ter.terminals.selectedIndex;
+			//var term = document.ter.terminals.options[termIndex].text;
 			var split = properties.split(" ");
 			var called = split[1];
 			var calling = split[2];
@@ -295,7 +273,6 @@
 
 		}
 
-		//updates the local state of call
 		function updateLocalState(state){
 			state=state.replace("local", "");
 			document.getElementById("localState").innerHTML=state;
@@ -312,7 +289,6 @@
 
 		}
 
-		//clears call display area
 		function clearCallInfo(){
 
 			document.getElementById("calling").innerHTML=""
@@ -324,15 +300,13 @@
 
 		}
 
-		//updates remote state of call
 		function updateRemoteState(state){
 			state=state.replace("remote", "");
 			document.getElementById("remoteState").innerHTML=state;
 			setCallControls(state);
 		}
 
-		//ensures only numbers are entered into originate box
-		//source: http://stackoverflow.com/questions/2808184/restricting-input-to-textbox-allowing-only-numbers-and-decimal-point
+		//http://stackoverflow.com/questions/2808184/restricting-input-to-textbox-allowing-only-numbers-and-decimal-point
 		function isNumberKey(evt){
 			var charCode = (evt.which) ? evt.which : event.keyCode;
 		    if ((charCode < 48 || charCode > 57))
@@ -348,7 +322,7 @@
 		<div id="clientStatus">The client is disconnected</div>
 		<form name="connect">
 			<input type="button" name="connect" value="Connect" onclick="doConnect()">
-			<input type="button" name="disconnect" value="Disconnect" onclick ="doDisconnect();" disabled>
+			<input type="button" name="disconnect" value="Disconnect" onclick ="doDisconnect();" >
 		</form>
 	</div>
 	<br>
@@ -358,8 +332,8 @@
 	</form>
 	<br>
 	<form name="originate">
-		<input type="button" name="originateButton" value="Originate" onclick="doOrigSend();" disabled>
-		<input type="text" name="origNumber" onkeypress="return isNumberKey(event)" disabled>
+		<input type="button" name="originateButton" value="Originate" onclick="doOrigSend();" >
+		<input type="text" name="origNumber" onkeypress="return isNumberKey(event)" >
 	</form>
 	<br>
 
@@ -385,14 +359,14 @@
 	<form name="callControls">
 		<table>
 			<tr>
-				<td><input type="button" name="answerCall" value="Answer" class="buttons" onclick="doSendCallControl(1);" disabled></td>
-				<td><input type="button" name="holdCall" value="Hold" class="buttons" onclick="doSendCallControl(2);" disabled></td>
-				<td><input type="button" name="transferCall" value="Transfer" class="buttons" onclick="doSendCallControl(3);" disabled></td>
+				<td><input type="button" name="answerCall" value="Answer" class="buttons" onclick="doSendCallControl(1);" ></td>
+				<td><input type="button" name="holdCall" value="Hold" class="buttons" onclick="doSendCallControl(2);" ></td>
+				<td><input type="button" name="transferCall" value="Transfer" class="buttons" onclick="doSendCallControl(3);" ></td>
 			</tr>
 			<tr>
-				<td><input type="button" name="releaseCall" value="Release" class="buttons" onclick="doSendCallControl(4);" disabled></td>
-				<td><input type="button" name="muteCall" value="Mute" class="buttons" onclick="doSendCallControl(5);" disabled></td>
-				<td><input type="button" name="conferenceCall" value="Conf." class="buttons" onclick="doSendCallControl(6);" disabled></td>
+				<td><input type="button" name="releaseCall" value="Release" class="buttons" onclick="doSendCallControl(4);" ></td>
+				<td><input type="button" name="muteCall" value="Mute" class="buttons" onclick="doSendCallControl(5);" ></td>
+				<td><input type="button" name="conferenceCall" value="Conf." class="buttons" onclick="doSendCallControl(6);" ></td>
 			</tr>
 		</table>
 	</form>
