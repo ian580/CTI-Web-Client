@@ -62,12 +62,16 @@
 					control = "hold";
 					onHold = true;
 					document.callControls.releaseCall.disabled = true;
+					document.callControls.transferCall.disabled = true;
+					document.callControls.conferenceCall.disabled = true;
 					document.callControls.holdCall.value="Unhold";
 				}
 				else{
 					control = "unhold";
 					onHold = false;
 					document.callControls.releaseCall.disabled = false;
+					document.callControls.transferCall.disabled = false;
+					document.callControls.conferenceCall.disabled = false;
 					document.callControls.holdCall.value="Hold";
 				}
 			}
@@ -82,12 +86,7 @@
 				}
 				else{
 					control = "complete";
-					document.callControls.releaseCall.disabled = true;
-					document.callControls.holdCall.disabled = true;
-					document.callControls.muteCall.disabled = true;
-					document.callControls.answerCall.disabled = true;
-					document.callControls.transferCall.disabled = true;
-					document.callControls.conferenceCall.disabled = true;
+					clearCallInfo();
 					document.callControls.transferCall.value="Transfer";
 					trans = false;
 				}
@@ -95,19 +94,8 @@
 			}
 			//when call is realeased clear display & disable buttons
 			else if(i == 4){
-				document.getElementById("calling").innerHTML="";
-				document.getElementById("called").innerHTML="";
-				document.getElementById("term/addr").innerHTML="";
-				document.getElementById("type").innerHTML="";
-				document.getElementById("localState").innerHTML="";
-				document.getElementById("remoteState").innerHTML="";
-				document.getElementById("id").innerHTML="";
-				document.callControls.releaseCall.disabled = true;
-				document.callControls.holdCall.disabled = true;
-				document.callControls.muteCall.disabled = true;
-				document.callControls.answerCall.disabled = true;
-				document.callControls.transferCall.disabled = true;
-				document.callControls.conferenceCall.disabled = true;
+				clearCallInfo();
+							
 				control = "release";
 			}
 			else if(i == 5){
@@ -163,6 +151,13 @@
 			document.getElementById("remoteState").innerHTML="";
 			document.getElementById("type").innerHTML="";
 			document.getElementById("id").innerHTML="";
+			document.getElementById("calling1").innerHTML="";
+			document.getElementById("called1").innerHTML="";
+			document.getElementById("term/addr1").innerHTML="";
+			document.getElementById("localState1").innerHTML="";
+			document.getElementById("remoteState1").innerHTML="";
+			document.getElementById("type1").innerHTML="";
+			document.getElementById("id1").innerHTML="";
 			removeOptions(document.ter.terminals);
 			removeOptions(document.ter.addresses);
 			i = 1;
@@ -289,14 +284,24 @@
 			var term = document.ter.terminals.options[termIndex].text;
 			var type = split[3];
 			var id = split[4];
-
+			var id1 = document.getElementById("id").innerHTML;
 			var terminalAddress;
 			terminalAddress = term + " / " + addr;
-			document.getElementById("calling").innerHTML=calling
-			document.getElementById("called").innerHTML=called;
-			document.getElementById("type").innerHTML=type;
-			document.getElementById("term/addr").innerHTML=terminalAddress;
-			document.getElementById("id").innerHTML=id;
+			if(id1=="" || id==id1){
+				document.getElementById("calling").innerHTML=calling
+				document.getElementById("called").innerHTML=called;
+				document.getElementById("type").innerHTML=type;
+				document.getElementById("term/addr").innerHTML=terminalAddress;
+				document.getElementById("id").innerHTML=id;
+			}
+			else{
+				document.getElementById("calling1").innerHTML=calling
+				document.getElementById("called1").innerHTML=called;
+				document.getElementById("type1").innerHTML=type;
+				document.getElementById("term/addr1").innerHTML=terminalAddress;
+				document.getElementById("id1").innerHTML=id;
+			}
+			
 
 		}
 
@@ -305,8 +310,16 @@
 			var split= msg.split(" ");
 			var state = split[1];
 			var id = split[2];
-			document.getElementById("localState").innerHTML=state;
-			if(state == "Dropped")
+			var reason = split[3];
+			if(reason != "Default")
+				state+="("+reason+")";
+			var id1 = document.getElementById("id").innerHTML;
+			if(id1=="" || id==id1)
+				document.getElementById("localState").innerHTML=state;
+			else
+				document.getElementById("localState1").innerHTML=state;
+			
+			if(state == "Dropped" && document.getElementById("localState1").innerHTML=="")
 				window.setTimeout("clearCallInfo()", 100);
 			else if(state == "Ringing"){
 				document.callControls.answerCall.disabled = false;
@@ -329,6 +342,13 @@
 			document.getElementById("localState").innerHTML="";
 			document.getElementById("remoteState").innerHTML="";
 			document.getElementById("id").innerHTML="";
+			document.getElementById("calling1").innerHTML=""
+			document.getElementById("called1").innerHTML="";
+			document.getElementById("type1").innerHTML="";
+			document.getElementById("term/addr1").innerHTML="";
+			document.getElementById("localState1").innerHTML="";
+			document.getElementById("remoteState1").innerHTML="";
+			document.getElementById("id1").innerHTML="";
 			document.callControls.releaseCall.disabled = true;
 			document.callControls.holdCall.disabled = true;
 			document.callControls.muteCall.disabled = true;
@@ -339,9 +359,15 @@
 		}
 
 		//updates remote state of call
-		function updateRemoteState(state){
-			state=state.replace("remote", "");
-			document.getElementById("remoteState").innerHTML=state;
+		function updateRemoteState(msg){
+			split=msg.split(" ");
+			var state = split[1];
+			var id = split[2];
+			var id1 = document.getElementById("id").innerHTML;
+			if(id1=="" || id==id1)
+				document.getElementById("remoteState").innerHTML=state;
+			else
+				document.getElementById("remoteState1").innerHTML=state;
 			setCallControls(state);
 		}
 
@@ -380,7 +406,7 @@
 	<table border="1" style="border-collapse:collapse; border-color:black;" padding="15px">
 		<tr>
 			<th>Terminal/Address</th>
-			<th>Local State</th>
+			<th width="180px">Local State</th>
 			<th>Remote State</th>
 			<th width="40px">Type</th>
 			<th>Contact ID</th>
@@ -395,6 +421,15 @@
 			<td id="id"></td>
 			<td id="calling"></td>
 			<td id="called"></td>
+		</tr>
+		<tr>
+			<td id="term/addr1" style="height:20px;"></td>
+			<td id="localState1"></td>
+			<td id="remoteState1"></td>
+			<td id="type1"></td>
+			<td id="id1"></td>
+			<td id="calling1"></td>
+			<td id="called1"></td>
 		</tr>
 	</table>
 

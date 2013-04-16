@@ -54,7 +54,16 @@ class ConnectionSocket
     //listens for messages from client
     private void Listen()
     {
-        ConnectedSocket.BeginReceive(dataBuffer, 0, dataBuffer.Length, 0, OnReceive, null);
+        try
+        {
+            ConnectedSocket.BeginReceive(dataBuffer, 0, dataBuffer.Length, 0, OnReceive, null);
+        }
+        catch (SocketException e)
+        {
+            Console.WriteLine("Socket Error Occurred");
+            Console.WriteLine("Details: " + e.Message);
+            closeConnection();
+        }
     }
     
     //method to send message to client
@@ -184,7 +193,9 @@ class ConnectionSocket
     {
         //send new state to client
         string id = e.Connection.ContactID;
-        send("local " + e.NewState.ToString() + " " + id);
+        string reason = e.Reason.ToString();
+        send("local " + e.NewState.ToString() + " " + id + " " + reason);
+        
     }
   
     private void onConnectionPropertyChanged(ConnectionPropertyEventArgs e)
@@ -197,7 +208,8 @@ class ConnectionSocket
     private void onConnectionStateChange(ConnectionStateEventArgs args)
     {
         //send new remote state to client
-        send("remote" + args.NewState.ToString());
+        string id = args.Connection.ContactID;
+        send("remote " + args.NewState.ToString() + " " + id);
     }
 
     //event handler for Contact Entering Scope
