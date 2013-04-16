@@ -183,7 +183,8 @@ class ConnectionSocket
     private void onTermConnStateChanged(TermConnStateEventArgs e)
     {
         //send new state to client
-        send("local" + e.NewState.ToString());
+        string id = e.Connection.ContactID;
+        send("local " + e.NewState.ToString() + " " + id);
     }
   
     private void onConnectionPropertyChanged(ConnectionPropertyEventArgs e)
@@ -354,6 +355,7 @@ class ConnectionSocket
             catch (OperationFailureException e)
             {
                 Console.WriteLine(e.Error.ToString());
+                send(e.Error.ToString());
             }
         }
         else
@@ -385,6 +387,7 @@ class ConnectionSocket
                 catch (OperationFailureException e)
                 {
                     Console.WriteLine(e.Error.ToString());
+                    send(e.Error.ToString());
                 }
             }
             else
@@ -462,7 +465,16 @@ class ConnectionSocket
         if (transferTerminalConn.Capabilities.CanCompleteTransfer)
         {
             //add try here and catch operation failure exception?
-            transferTerminalConn.CompleteSupervisedTransfer(trans);
+            try
+            {
+                transferTerminalConn.CompleteSupervisedTransfer(trans);
+                Console.WriteLine("Transfer Completed");
+            }
+            catch (OperationFailureException e)
+            {
+                Console.WriteLine(e.Error.ToString());
+                send(e.Error.ToString());
+            }
             Console.WriteLine("Transfer Completed");
             transferTerminalConn = null;
         }
@@ -514,9 +526,16 @@ class ConnectionSocket
         //check that conference can be completed
         if (conferenceTerminalConn.Capabilities.CanCompleteConference)
         {
-            //add try catch here
-            conferenceTerminalConn.CompleteConference(conf);
-            Console.WriteLine("Conference Completed");
+            try
+            {
+                conferenceTerminalConn.CompleteConference(conf);
+                Console.WriteLine("Conference Completed");
+            }
+            catch (OperationFailureException e)
+            {
+                Console.WriteLine(e.Error.ToString());
+                send(e.Error.ToString());
+            }
             conferenceTerminalConn = null;
         }
         else
@@ -619,6 +638,7 @@ class ConnectionSocket
         string callingAddress = contact.CallingAddress;
         string[] contactType = contact.ContactTypes;
         string ct = contactType[0];
+        string id = contact.ID;
         Console.WriteLine("Called: " + called);
         Console.WriteLine("Calling Address: " + callingAddress);
         Console.WriteLine("Type: " + ct);
@@ -629,7 +649,7 @@ class ConnectionSocket
             terminalConn = conn[1].TerminalConnections[0];
         TerminalConnectionState state = terminalConn.CurrentState;
         string localState = state.ToString();
-        string properties = "properties " + called + " " + callingAddress + " " + ct + " " + localState;
+        string properties = "properties " + called + " " + callingAddress + " " + ct + " " + id;
         //send properties to client
         send(properties);
     }

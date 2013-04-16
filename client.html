@@ -53,7 +53,6 @@
 				document.callControls.releaseCall.disabled = false;
 				document.callControls.answerCall.disabled = true;
 				document.callControls.holdCall.disabled = false;
-				document.callControls.muteCall.disabled = false;
 				document.callControls.transferCall.disabled = false;
 				document.callControls.conferenceCall.disabled = false;
 
@@ -77,6 +76,8 @@
 					var orig = document.originate.origNumber.value;
 					control = "transfer " + orig;
 					document.callControls.transferCall.value="Complete";
+					document.callControls.holdCall.disabled = true;
+					document.callControls.conferenceCall.disabled = true;
 					trans = true;
 				}
 				else{
@@ -100,6 +101,7 @@
 				document.getElementById("type").innerHTML="";
 				document.getElementById("localState").innerHTML="";
 				document.getElementById("remoteState").innerHTML="";
+				document.getElementById("id").innerHTML="";
 				document.callControls.releaseCall.disabled = true;
 				document.callControls.holdCall.disabled = true;
 				document.callControls.muteCall.disabled = true;
@@ -125,6 +127,8 @@
 					var orig = document.originate.origNumber.value;
 					control = "conf " + orig;
 					document.callControls.conferenceCall.value="Complete";
+					document.callControls.holdCall.disabled = true;
+					document.callControls.transferCall.disabled = true;
 					conf = true;
 				}
 				else{
@@ -158,6 +162,7 @@
 			document.getElementById("localState").innerHTML="";
 			document.getElementById("remoteState").innerHTML="";
 			document.getElementById("type").innerHTML="";
+			document.getElementById("id").innerHTML="";
 			removeOptions(document.ter.terminals);
 			removeOptions(document.ter.addresses);
 			i = 1;
@@ -180,7 +185,6 @@
 				document.callControls.releaseCall.disabled = false;
 			else if(state == "Established" && document.getElementById("localState").innerHTML != "Ringing"){
 				document.callControls.holdCall.disabled = false;
-				document.callControls.muteCall.disabled = false;
 				document.callControls.transferCall.disabled = false;
 				document.callControls.conferenceCall.disabled = false;
 			}
@@ -284,7 +288,7 @@
 
 			var term = document.ter.terminals.options[termIndex].text;
 			var type = split[3];
-			var localState = split[4];
+			var id = split[4];
 
 			var terminalAddress;
 			terminalAddress = term + " / " + addr;
@@ -292,12 +296,15 @@
 			document.getElementById("called").innerHTML=called;
 			document.getElementById("type").innerHTML=type;
 			document.getElementById("term/addr").innerHTML=terminalAddress;
+			document.getElementById("id").innerHTML=id;
 
 		}
 
 		//updates the local state of call
-		function updateLocalState(state){
-			state=state.replace("local", "");
+		function updateLocalState(msg){
+			var split= msg.split(" ");
+			var state = split[1];
+			var id = split[2];
 			document.getElementById("localState").innerHTML=state;
 			if(state == "Dropped")
 				window.setTimeout("clearCallInfo()", 100);
@@ -321,6 +328,13 @@
 			document.getElementById("term/addr").innerHTML="";
 			document.getElementById("localState").innerHTML="";
 			document.getElementById("remoteState").innerHTML="";
+			document.getElementById("id").innerHTML="";
+			document.callControls.releaseCall.disabled = true;
+			document.callControls.holdCall.disabled = true;
+			document.callControls.muteCall.disabled = true;
+			document.callControls.answerCall.disabled = true;
+			document.callControls.transferCall.disabled = true;
+			document.callControls.conferenceCall.disabled = true;
 
 		}
 
@@ -369,6 +383,7 @@
 			<th>Local State</th>
 			<th>Remote State</th>
 			<th width="40px">Type</th>
+			<th>Contact ID</th>
 			<th>Calling</th>
 			<th>Called</th>
 		</tr>
@@ -376,7 +391,8 @@
 			<td id="term/addr" style="height:20px;"></td>
 			<td id="localState"></td>
 			<td id="remoteState"></td>
-			<td id ="type"></td>
+			<td id="type"></td>
+			<td id="id"></td>
 			<td id="calling"></td>
 			<td id="called"></td>
 		</tr>
