@@ -18,6 +18,7 @@ class ConnectionSocket
     public IAddress[] myAddresses;
     public IContact contact;
     private IConnection[] conn = null;
+    private IConnection[] prevconn = null;
     private ITerminalConnection terminalConn = null;
     private AccessPermissions perm;
     private IContact transfer = null;
@@ -120,8 +121,6 @@ class ConnectionSocket
     //register event handlers for CCT events
     private void createEventHandlers()
     {
-        ConnectionPropertyEventHandler handler = myToolkit.CreateEventHandler(new ConnectionPropertyEventHandler(onConnectionPropertyChanged));
-        mySession.ConnectionPropertyChanged += handler;
         TermConnStateEventHandler hand = myToolkit.CreateEventHandler(new TermConnStateEventHandler(onTermConnStateChanged));
         mySession.TermConnStateChanged += hand;
         ConnectionStateEventHandler connStateEventHandler = myToolkit.CreateEventHandler(new ConnectionStateEventHandler(onConnectionStateChange));
@@ -198,17 +197,13 @@ class ConnectionSocket
         
     }
   
-    private void onConnectionPropertyChanged(ConnectionPropertyEventArgs e)
-    {
-        Console.WriteLine("The {0} property has changed on connection to address {1}.", e.ChangedProperty, e.Address.Name);
-    }
-
     //event handler for Connection State Changed
     //represents a change of the remote state of the call
     private void onConnectionStateChange(ConnectionStateEventArgs args)
     {
         //send new remote state to client
         string id = args.Connection.ContactID;
+        
         send("remote " + args.NewState.ToString() + " " + id);
     }
 
@@ -217,7 +212,8 @@ class ConnectionSocket
     private void onContactEnteringScope(ContactScopeEventArgs args)
     {
         Console.WriteLine("Contact {0} has entered scope.", args.Contact.ID);
-        contact = args.Contact;//store contact 
+        contact = args.Contact;//store contact
+        prevconn = conn;
         conn = contact.Connections;//get connections from contact
         //get the properties of new connection
         getContactProperties();
@@ -561,7 +557,6 @@ class ConnectionSocket
     //method to release active call
     public void releaseCall()
     {
-        Console.WriteLine("Release call method");
         if (conn != null)
         {
             //release the connection that can disconnect(local leg of call)
@@ -577,6 +572,19 @@ class ConnectionSocket
                 conn[1].Disconnect();
                 conn = null;
                 contact = null;
+                Console.WriteLine("Call disconnected");
+            }
+            //Cases for conference call
+            else if (prevconn[0].Capabilities.CanDisconnect)
+            {
+                prevconn[0].Disconnect();
+                prevconn = null;
+                Console.WriteLine("Call disconnected");
+            }
+            else if (prevconn[1].Capabilities.CanDisconnect)
+            {
+                prevconn[1].Disconnect();
+                prevconn = null;
                 Console.WriteLine("Call disconnected");
             }
             else

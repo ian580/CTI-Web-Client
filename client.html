@@ -169,6 +169,12 @@
 				document.callControls.transferCall.disabled = true;
 				document.callControls.answerCall.disabled = true;
 				document.callControls.conferenceCall.disabled = true;
+				document.callControls.holdCall.value="Hold";
+				document.callControls.transferCall.value="Transfer";
+				document.callControls.conferenceCall.value="Conf.";
+				trans = false;
+				conf = false;
+				onHold = false;
 
 			}
         }
@@ -319,7 +325,7 @@
 			else
 				document.getElementById("localState1").innerHTML=state;
 			
-			if(state == "Dropped" && document.getElementById("localState1").innerHTML=="")
+			if((state == "Dropped"||state=="Dropped(TransferComplete)") && document.getElementById("localState1").innerHTML=="")
 				window.setTimeout("clearCallInfo()", 100);
 			else if(state == "Ringing"){
 				document.callControls.answerCall.disabled = false;
@@ -355,6 +361,12 @@
 			document.callControls.answerCall.disabled = true;
 			document.callControls.transferCall.disabled = true;
 			document.callControls.conferenceCall.disabled = true;
+			document.callControls.holdCall.value="Hold";
+			document.callControls.transferCall.value="Transfer";
+			document.callControls.conferenceCall.value="Conf.";
+			trans = false;
+			conf = false;
+			onHold = false;
 
 		}
 
